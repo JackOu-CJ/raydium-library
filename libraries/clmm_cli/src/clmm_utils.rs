@@ -194,7 +194,7 @@ pub fn calculate_swap_change(
     raydium_v3_program: Pubkey,
     pool_id: Pubkey,
     tickarray_bitmap_extension: Pubkey,
-    input_token: Pubkey,
+    input_mint: Pubkey,
     amount: u64,
     limit_price: Option<f64>,
     base_in: bool,
@@ -206,7 +206,6 @@ pub fn calculate_swap_change(
             .unwrap();
     // load mult account
     let load_accounts = vec![
-        input_token,
         pool_state.amm_config,
         pool_state.token_mint_0,
         pool_state.token_mint_1,
@@ -214,12 +213,10 @@ pub fn calculate_swap_change(
     ];
     let rsps = rpc_client.get_multiple_accounts(&load_accounts).unwrap();
     let epoch = rpc_client.get_epoch_info().unwrap().epoch;
-    let [user_input_account, amm_config_account, mint0_account, mint1_account, tickarray_bitmap_extension_account] =
-        array_ref![rsps, 0, 5];
+    let [amm_config_account, mint0_account, mint1_account, tickarray_bitmap_extension_account] =
+        array_ref![rsps, 0, 4];
     let mint0_token_program = mint0_account.as_ref().unwrap().owner;
     let mint1_token_program = mint1_account.as_ref().unwrap().owner;
-    let user_input_state =
-        common_utils::unpack_token(&user_input_account.as_ref().unwrap().data).unwrap();
     let mint0_state = common_utils::unpack_mint(&mint0_account.as_ref().unwrap().data).unwrap();
     let mint1_state = common_utils::unpack_mint(&mint1_account.as_ref().unwrap().data).unwrap();
     let tickarray_bitmap_extension_state = common_utils::deserialize_anchor_account::<
@@ -241,7 +238,7 @@ pub fn calculate_swap_change(
         output_vault_mint,
         input_token_program,
         output_token_program,
-    ) = if user_input_state.base.mint == pool_state.token_mint_0 {
+    ) = if input_mint == pool_state.token_mint_0 {
         (
             true,
             pool_state.token_vault_0,
@@ -251,7 +248,7 @@ pub fn calculate_swap_change(
             mint0_token_program,
             mint1_token_program,
         )
-    } else if user_input_state.base.mint == pool_state.token_mint_1 {
+    } else if input_mint == pool_state.token_mint_1 {
         (
             false,
             pool_state.token_vault_1,
@@ -350,7 +347,7 @@ pub fn calculate_swap_change(
         output_vault_mint,
         input_token_program,
         output_token_program,
-        user_input_token: input_token,
+        user_input_token: input_mint,
         remaining_tick_array_keys,
         amount,
         other_amount_threshold,
